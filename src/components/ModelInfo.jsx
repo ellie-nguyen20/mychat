@@ -22,10 +22,10 @@ const ModelInfo = ({ currentModel, onModelChange }) => {
     {
       id: 'deepseek-r1-0528',
       name: 'DeepSeek R1-0528',
-      fullName: 'deepseek-ai/DeepSeek-R1-0528',
-      description: 'Latest model - excels in reasoning, math & coding',
-      price: '$2.13/M',
-      features: ['Latest model', 'Dedicated performance', 'Advanced reasoning']
+      fullName: 'deepseek-ai/DeepSeek-R1-0528-Free',
+      description: 'Latest model - excels in reasoning, math & coding (Free version)',
+      price: 'Free',
+      features: ['Latest model', 'Free version', 'Advanced reasoning']
     },
     {
       id: 'gpt-4o-mini',
@@ -36,13 +36,13 @@ const ModelInfo = ({ currentModel, onModelChange }) => {
       features: ['Multimodal', 'OpenAI brand', 'Image analysis']
     },
     {
-      id: 'claude-sonnet-4',
-      name: 'Claude Sonnet 4',
-      fullName: 'anthropic/claude-3-5-sonnet-20241022',
-      description: 'ChatGPT Pro equivalent - superior intelligence',
-      price: '$15/M',
-      features: ['Pro equivalent', 'Superior intelligence', 'High-end']
-    }
+      id: 'gemini-2.5-pro',
+      name: 'Gemini 2.5 Pro',
+      fullName: 'gemini/gemini-2.5-pro',
+      description: 'Google Gemini 2.5 Pro - Advanced reasoning and multimodal capabilities',
+      price: '$2.0/M',
+      features: ['Google model', 'Advanced reasoning', 'Multimodal', 'High performance']
+    },
   ];
 
   const currentModelInfo = models.find(m => m.id === currentModel) || models[0];
@@ -74,7 +74,7 @@ const ModelInfo = ({ currentModel, onModelChange }) => {
       <div style={{
         fontSize: '0.75rem',
         color: '#D1D5DB',
-        fontFamily: 'monospace',
+        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
         marginBottom: '0.5rem',
         padding: '0.25rem 0.5rem',
         background: 'rgba(26, 26, 26, 0.6)',
@@ -182,7 +182,7 @@ const ModelInfo = ({ currentModel, onModelChange }) => {
               <div style={{ 
                 fontSize: '0.7rem', 
                 opacity: 0.7, 
-                fontFamily: 'monospace',
+                fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
                 wordBreak: 'break-all',
                 color: '#D1D5DB'
               }}>

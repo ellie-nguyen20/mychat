@@ -3,6 +3,7 @@ import ChatMessage from './components/ChatMessage';
 import ChatInput from './components/ChatInput';
 import ApiKeyModal from './components/ApiKeyModal';
 import ModelInfo from './components/ModelInfo';
+import CurrentModelDisplay from './components/CurrentModelDisplay';
 import nebulaApi from './api/nebulaApi';
 
 function App() {
@@ -11,7 +12,7 @@ function App() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [error, setError] = useState('');
-  const [currentModel, setCurrentModel] = useState('qwen2.5-vl-7b');
+  const [currentModel, setCurrentModel] = useState('gemini-2.5-pro');
   const messagesEndRef = useRef(null);
 
   // Check API key when component mounts
@@ -27,21 +28,91 @@ function App() {
     }
   }, []);
 
+  // Load chat history from localStorage on mount
+  useEffect(() => {
+    const savedMessages = localStorage.getItem('chat_history');
+    if (savedMessages) {
+      try {
+        const parsedMessages = JSON.parse(savedMessages);
+        setMessages(parsedMessages);
+        console.log('📚 Loaded chat history:', parsedMessages.length, 'messages');
+      } catch (error) {
+        console.error('❌ Error loading chat history:', error);
+      }
+    }
+  }, []);
+
+  // Save chat history to localStorage whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('chat_history', JSON.stringify(messages));
+      console.log('💾 Saved chat history:', messages.length, 'messages');
+    }
+  }, [messages]);
+
   // Auto scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Get current model info
+  const getCurrentModelInfo = () => {
+    const models = [
+      {
+        id: 'qwen2.5-vl-7b',
+        name: 'Qwen2.5-VL-7B',
+        fullName: 'Qwen/Qwen2.5-VL-7B-Instruct',
+        description: 'Vision Language Model - Excellent image analysis and understanding',
+        price: '$0.5/M',
+        features: ['Vision model', 'Image analysis', 'Multimodal', '7B parameters']
+      },
+      {
+        id: 'deepseek-v3-0324',
+        name: 'DeepSeek V3-0324',
+        fullName: 'deepseek-ai/DeepSeek-V3-0324',
+        description: '685B parameters - State-of-the-art reasoning, math & coding',
+        price: '$1.1/M',
+        features: ['Best performance', 'Free version available', '685B parameters']
+      },
+      {
+        id: 'deepseek-r1-0528',
+        name: 'DeepSeek R1-0528',
+        fullName: 'deepseek-ai/DeepSeek-R1-0528-Free',
+        description: 'Latest model - excels in reasoning, math & coding (Free version)',
+        price: 'Free',
+        features: ['Latest model', 'Free version', 'Advanced reasoning']
+      },
+      {
+        id: 'gpt-4o-mini',
+        name: 'GPT-4o-mini',
+        fullName: 'openai/gpt-4o-mini',
+        description: 'OpenAI model with multimodal support',
+        price: '$1.6/M',
+        features: ['Multimodal', 'OpenAI brand', 'Image analysis']
+      },
+      {
+        id: 'gemini-2.5-pro',
+        name: 'Gemini 2.5 Pro',
+        fullName: 'gemini/gemini-2.5-pro',
+        description: 'Google Gemini 2.5 Pro - Advanced reasoning and multimodal capabilities',
+        price: '$2.0/M',
+        features: ['Google model', 'Advanced reasoning', 'Multimodal', 'High performance']
+      }
+    ];
+
+    return models.find(m => m.id === currentModel) || models[0];
+  };
+
   const handleSendMessage = async (messageData) => {
-    const { text, image } = messageData;
+    const { text, images } = messageData;
     
-    if (!text.trim() && !image) return;
+    if (!text.trim() && (!images || images.length === 0)) return;
 
     // Add user message
     const userMessage = {
       id: Date.now(),
       content: text || '',
-      image: image,
+      images: images || [],
       isUser: true,
       timestamp: new Date()
     };
@@ -57,23 +128,32 @@ function App() {
         content: msg.content
       }));
 
-      // Convert image to base64 if present
-      let imageUrl = null;
-      if (image) {
-        imageUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(image);
-        });
+      // Convert images to base64 if present
+      let imageUrls = [];
+      if (images && images.length > 0) {
+        imageUrls = await Promise.all(
+          images.map(image => new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(image);
+          }))
+        );
       }
 
       // Send message to Nebula API with current model
-      const response = await nebulaApi.sendChatMessage(text || '', conversationHistory, imageUrl);
+      const response = await nebulaApi.sendChatMessage(text || '', conversationHistory, imageUrls.length > 0 ? imageUrls : null);
       
       // Add AI response
+      let responseContent = response.choices?.[0]?.message?.content || 'Sorry, I cannot process your request.';
+      
+      // Add note if we had to use fallback for multiple images
+      if (images && images.length > 1) {
+        responseContent = `[Note: Due to request size limits, I analyzed the first image only. ${images.length} images were provided.]\n\n${responseContent}`;
+      }
+      
       const assistantMessage = {
         id: Date.now() + 1,
-        content: response.choices?.[0]?.message?.content || 'Sorry, I cannot process your request.',
+        content: responseContent,
         isUser: false,
         timestamp: new Date()
       };
@@ -111,6 +191,8 @@ function App() {
   const handleClearChat = () => {
     setMessages([]);
     setError('');
+    localStorage.removeItem('chat_history');
+    console.log('🗑️ Chat history cleared');
   };
 
   const handleClearApiKey = () => {
@@ -125,6 +207,26 @@ function App() {
     setCurrentModel(modelId);
     nebulaApi.setModel(modelId);
     console.log('🎯 Switched to model:', modelId);
+  };
+
+  const handleExportChat = () => {
+    const chatData = {
+      messages: messages,
+      exportDate: new Date().toISOString(),
+      model: currentModel
+    };
+    
+    const dataStr = JSON.stringify(chatData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `chat-history-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    URL.revokeObjectURL(url);
+    console.log('📤 Chat history exported');
   };
 
   // Debug log
@@ -199,10 +301,43 @@ function App() {
       <div className="shooting-star"></div>
       <div className="shooting-star"></div>
       <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
+      <div className="shooting-star"></div>
       
       <div className="chat-header">
         <h1>Hello Ellie</h1>
         <div className="header-controls">
+          <button
+            onClick={handleExportChat}
+            className="header-button"
+            title="Export chat history"
+            disabled={messages.length === 0}
+          >
+            Export
+          </button>
           <button
             onClick={handleClearChat}
             className="header-button"
@@ -230,6 +365,9 @@ function App() {
             <div className="welcome-message">
               <h3>Hello Ellie. How can I help you?</h3>
               <p>Start a conversation by typing a message below.</p>
+              <p style={{ fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.6)', marginTop: '0.5rem' }}>
+                💾 Your chat history will be automatically saved
+              </p>
             </div>
           </>
         )}
@@ -238,7 +376,7 @@ function App() {
           <ChatMessage
             key={message.id}
             message={message.content}
-            image={message.image}
+            images={message.images}
             isUser={message.isUser}
           />
         ))}
@@ -285,6 +423,13 @@ function App() {
         isOpen={showApiKeyModal}
         onClose={() => setShowApiKeyModal(false)}
         onApiKeySet={handleApiKeySet}
+      />
+
+      {/* Current Model Display */}
+      <CurrentModelDisplay 
+        currentModel={currentModel}
+        modelInfo={getCurrentModelInfo()}
+        onModelChange={handleModelChange}
       />
     </div>
   );
