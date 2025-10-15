@@ -108,27 +108,11 @@ function App() {
     
     if (!text.trim() && (!images || images.length === 0)) return;
 
-    // Add user message
-    const userMessage = {
-      id: Date.now(),
-      content: text || '',
-      images: images || [],
-      isUser: true,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     setError('');
 
     try {
-      // Prepare conversation history for API
-      const conversationHistory = messages.map(msg => ({
-        role: msg.isUser ? 'user' : 'assistant',
-        content: msg.content
-      }));
-
-      // Convert images to base64 if present
+      // Convert images to base64 if present (for both display and API)
       let imageUrls = [];
       if (images && images.length > 0) {
         imageUrls = await Promise.all(
@@ -139,6 +123,23 @@ function App() {
           }))
         );
       }
+
+      // Add user message with base64 images (so it can be saved to localStorage)
+      const userMessage = {
+        id: Date.now(),
+        content: text || '',
+        images: imageUrls || [], // Store base64 strings instead of File objects
+        isUser: true,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, userMessage]);
+
+      // Prepare conversation history for API
+      const conversationHistory = messages.map(msg => ({
+        role: msg.isUser ? 'user' : 'assistant',
+        content: msg.content
+      }));
 
       // Send message to Nebula API with current model
       const response = await nebulaApi.sendChatMessage(text || '', conversationHistory, imageUrls.length > 0 ? imageUrls : null);
@@ -344,13 +345,6 @@ function App() {
             title="Clear conversation"
           >
             Clear chat
-          </button>
-          <button
-            onClick={handleClearApiKey}
-            className="header-button"
-            title="Logout"
-          >
-            Logout
           </button>
         </div>
       </div>

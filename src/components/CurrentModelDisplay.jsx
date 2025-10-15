@@ -92,6 +92,8 @@ const CurrentModelDisplay = ({ currentModel, modelInfo, onModelChange }) => {
     setIsOpen(false);
   };
 
+  console.log('🔍 CurrentModelDisplay render, isOpen:', isOpen);
+  
   return (
     <div 
       ref={dropdownRef}
@@ -99,28 +101,35 @@ const CurrentModelDisplay = ({ currentModel, modelInfo, onModelChange }) => {
         position: 'fixed',
         top: '20px',
         right: '20px',
-        width: '280px',
+        width: isOpen ? '280px' : '200px',
         background: 'rgba(0, 0, 0, 0.8)',
         backdropFilter: 'blur(20px)',
         borderRadius: '12px',
-        padding: '16px',
+        padding: isOpen ? '16px' : '10px 12px',
         border: `1px solid ${modelColor}40`,
         boxShadow: `0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px ${modelColor}20`,
         zIndex: 1000,
-        transition: 'all 0.3s ease',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
         cursor: 'pointer'
       }} 
-      onClick={() => setIsOpen(!isOpen)}
+      onClick={() => {
+        console.log('🔍 Current Model clicked, isOpen:', isOpen);
+        setIsOpen(!isOpen);
+        console.log('🔍 After setState, new isOpen will be:', !isOpen);
+      }}
     >
       {/* Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '12px',
-        paddingBottom: '8px',
-        borderBottom: `1px solid ${modelColor}30`
+        justifyContent: isOpen ? 'space-between' : 'center',
+        marginBottom: isOpen ? '12px' : '0',
+        paddingBottom: isOpen ? '8px' : '0',
+        borderBottom: isOpen ? `1px solid ${modelColor}30` : 'none',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        height: isOpen ? 'auto' : '100%',
+        minHeight: isOpen ? 'auto' : '32px'
       }}>
         <div style={{
           display: 'flex',
@@ -131,24 +140,31 @@ const CurrentModelDisplay = ({ currentModel, modelInfo, onModelChange }) => {
           <span style={{
             color: modelColor,
             fontWeight: '600',
-            fontSize: '14px'
+            fontSize: isOpen ? '14px' : '13px',
+            transition: 'font-size 0.3s ease'
           }}>
-            Current Model
+            {isOpen ? 'Current Model' : modelInfo.name}
           </span>
         </div>
-        <ChevronDown 
-          size={16} 
-          style={{ 
-            color: modelColor,
-            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.3s ease'
-          }} 
-        />
+        {isOpen && (
+          <ChevronDown 
+            size={16} 
+            style={{ 
+              color: modelColor,
+              transform: 'rotate(180deg)',
+              transition: 'transform 0.3s ease'
+            }} 
+          />
+        )}
       </div>
 
       {/* Model Name */}
       <div style={{
-        marginBottom: '8px'
+        marginBottom: isOpen ? '8px' : '0',
+        opacity: isOpen ? 1 : 0,
+        maxHeight: isOpen ? '100px' : '0',
+        overflow: 'hidden',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
         <h3 style={{
           color: '#FFFFFF',
@@ -177,7 +193,11 @@ const CurrentModelDisplay = ({ currentModel, modelInfo, onModelChange }) => {
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
-        marginBottom: '8px'
+        marginBottom: isOpen ? '8px' : '0',
+        opacity: isOpen ? 1 : 0,
+        maxHeight: isOpen ? '30px' : '0',
+        overflow: 'hidden',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
         <DollarSign size={12} style={{ color: modelColor }} />
         <span style={{
@@ -194,7 +214,11 @@ const CurrentModelDisplay = ({ currentModel, modelInfo, onModelChange }) => {
         color: '#E5E7EB',
         fontSize: '12px',
         lineHeight: '1.4',
-        margin: '0 0 12px 0'
+        margin: '0 0 12px 0',
+        opacity: isOpen ? 1 : 0,
+        maxHeight: isOpen ? '60px' : '0',
+        overflow: 'hidden',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
         {modelInfo.description}
       </p>
@@ -203,7 +227,11 @@ const CurrentModelDisplay = ({ currentModel, modelInfo, onModelChange }) => {
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
-        gap: '4px'
+        gap: '4px',
+        opacity: isOpen ? 1 : 0,
+        maxHeight: isOpen ? '40px' : '0',
+        overflow: 'hidden',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
         {modelInfo.features.slice(0, 3).map((feature, index) => (
           <span key={index} style={{
@@ -222,14 +250,18 @@ const CurrentModelDisplay = ({ currentModel, modelInfo, onModelChange }) => {
 
       {/* Status Indicator */}
       <div style={{
-        marginTop: '12px',
+        marginTop: isOpen ? '12px' : '0',
         padding: '6px 8px',
         background: 'rgba(16, 163, 127, 0.1)',
         borderRadius: '6px',
         border: '1px solid rgba(16, 163, 127, 0.3)',
         display: 'flex',
         alignItems: 'center',
-        gap: '6px'
+        gap: '6px',
+        opacity: isOpen ? 1 : 0,
+        maxHeight: isOpen ? '40px' : '0',
+        overflow: 'hidden',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
         <div style={{
           width: '6px',
@@ -261,8 +293,14 @@ const CurrentModelDisplay = ({ currentModel, modelInfo, onModelChange }) => {
           boxShadow: `0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px ${modelColor}20`,
           marginTop: '8px',
           maxHeight: '300px',
+          overflow: 'hidden',
+          zIndex: 1001,
+          animation: 'fadeInDown 0.3s ease-out'
+        }}>
+        <div style={{
+          maxHeight: '300px',
           overflowY: 'auto',
-          zIndex: 1001
+          padding: '8px 0'
         }}>
           {availableModels.map((model) => {
             const isSelected = model.id === currentModel;
@@ -373,6 +411,7 @@ const CurrentModelDisplay = ({ currentModel, modelInfo, onModelChange }) => {
               </div>
             );
           })}
+        </div>
         </div>
       )}
     </div>

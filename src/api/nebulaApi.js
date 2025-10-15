@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configure API base URL and headers for Nebula Block
-const API_BASE_URL = 'https://dev-llm-proxy.nebulablock.com/v1';
+const API_BASE_URL = 'https://inference.nebulablock.com/v1';
 
 class NebulaApiService {
   constructor() {
@@ -268,11 +268,28 @@ class NebulaApiService {
   async testConnection() {
     try {
       console.log('🌐 Testing API connection...');
-      const response = await this.api.get('/models');
+      // Test with a simple chat completion request instead of /models
+      const testData = {
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello'
+          }
+        ],
+        model: 'openai/gpt-4o-mini',
+        max_tokens: 10
+      };
+      
+      const response = await this.api.post('/chat/completions', testData);
       console.log('✅ Connection test successful');
       return true;
     } catch (error) {
       console.error('❌ Connection test failed:', error);
+      // Check if it's just an authentication error vs a real connection error
+      if (error.response?.status === 401) {
+        console.log('🔑 API key test failed - authentication required');
+        return false;
+      }
       return false;
     }
   }

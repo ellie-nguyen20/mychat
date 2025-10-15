@@ -24,38 +24,68 @@ const ChatMessage = ({ message, images, isUser }) => {
     }
   };
 
-  const handleCopyImage = async (image) => {
-    if (!image) return;
+  const handleCopyImage = async (imageData) => {
+    if (!imageData) return;
     
     try {
-      // Convert image to blob and copy to clipboard
-      const response = await fetch(URL.createObjectURL(image));
+      // Check if imageData is a File object or base64 string
+      let imageUrl;
+      if (imageData instanceof File) {
+        imageUrl = URL.createObjectURL(imageData);
+      } else if (typeof imageData === 'string' && imageData.startsWith('data:')) {
+        imageUrl = imageData;
+      } else {
+        console.error('Unknown image format:', typeof imageData);
+        return;
+      }
+
+      // Convert to blob
+      const response = await fetch(imageUrl);
       const blob = await response.blob();
       
       const clipboardItem = new ClipboardItem({
-        'image/png': blob
+        [blob.type]: blob
       });
       
       await navigator.clipboard.write([clipboardItem]);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      
+      // Clean up object URL if we created one
+      if (imageData instanceof File) {
+        URL.revokeObjectURL(imageUrl);
+      }
     } catch (err) {
       console.error('Failed to copy image: ', err);
-      // Fallback: download image
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(image);
-      link.download = 'image.png';
-      link.click();
     }
   };
 
-  const handleDownloadImage = (image) => {
-    if (!image) return;
+  const handleDownloadImage = (imageData) => {
+    if (!imageData) return;
     
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(image);
-    link.download = `image-${Date.now()}.png`;
-    link.click();
+    try {
+      let imageUrl;
+      if (imageData instanceof File) {
+        imageUrl = URL.createObjectURL(imageData);
+      } else if (typeof imageData === 'string' && imageData.startsWith('data:')) {
+        imageUrl = imageData;
+      } else {
+        console.error('Unknown image format:', typeof imageData);
+        return;
+      }
+
+      const link = document.createElement('a');
+      link.href = imageUrl;
+      link.download = `image-${Date.now()}.png`;
+      link.click();
+      
+      // Clean up object URL if we created one
+      if (imageData instanceof File) {
+        setTimeout(() => URL.revokeObjectURL(imageUrl), 100);
+      }
+    } catch (err) {
+      console.error('Failed to download image: ', err);
+    }
   };
 
   return (
@@ -107,25 +137,37 @@ const ChatMessage = ({ message, images, isUser }) => {
               flexWrap: 'wrap',
               gap: '8px'
             }}>
-              {images.map((image, index) => (
-                <div key={index} style={{ 
-                  position: 'relative',
-                  display: 'inline-block'
-                }}>
-                  <img 
-                    src={URL.createObjectURL(image)} 
-                    alt={`Uploaded ${index + 1}`} 
-                    style={{
-                      maxWidth: '200px',
-                      maxHeight: '150px',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      cursor: 'pointer',
-                      objectFit: 'cover'
-                    }}
-                    onClick={() => handleCopyImage(image)}
-                    title="Click to copy image"
-                  />
+              {images.map((image, index) => {
+                // Get image URL based on type
+                let imageUrl;
+                if (image instanceof File) {
+                  imageUrl = URL.createObjectURL(image);
+                } else if (typeof image === 'string' && image.startsWith('data:')) {
+                  imageUrl = image;
+                } else {
+                  console.error('Unknown image format at index', index, ':', typeof image);
+                  return null;
+                }
+
+                return (
+                  <div key={index} style={{ 
+                    position: 'relative',
+                    display: 'inline-block'
+                  }}>
+                    <img 
+                      src={imageUrl} 
+                      alt={`Uploaded ${index + 1}`} 
+                      style={{
+                        maxWidth: '200px',
+                        maxHeight: '150px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        cursor: 'pointer',
+                        objectFit: 'cover'
+                      }}
+                      onClick={() => handleCopyImage(image)}
+                      title="Click to copy image"
+                    />
                   <div style={{
                     position: 'absolute',
                     top: '4px',
@@ -177,7 +219,8 @@ const ChatMessage = ({ message, images, isUser }) => {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

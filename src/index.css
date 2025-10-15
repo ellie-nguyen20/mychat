@@ -111,6 +111,17 @@ body::after {
   }
 }
 
+@keyframes fadeInDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Shooting Stars */
 @keyframes shootingStar {
   0% {
@@ -476,8 +487,8 @@ body::after {
   flex-direction: column;
   position: relative;
   z-index: 1;
-  padding-left: 20%;
-  padding-right: 20%;
+  padding-left: calc(20% - 20px);
+  padding-right: calc(20% - 20px);
   padding-bottom: 10vh;
 }
 
