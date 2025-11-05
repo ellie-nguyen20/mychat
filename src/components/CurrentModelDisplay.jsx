@@ -86,13 +86,15 @@ const CurrentModelDisplay = ({ currentModel, modelInfo, onModelChange }) => {
   ];
 
   const handleModelSelect = (modelId) => {
+    console.log('🔍 Model selected:', modelId);
     if (onModelChange) {
       onModelChange(modelId);
     }
     setIsOpen(false);
+    console.log('✅ Model selection completed');
   };
 
-  console.log('🔍 CurrentModelDisplay render, isOpen:', isOpen);
+  console.log('🔍 CurrentModelDisplay render, isOpen:', isOpen, 'currentModel:', currentModel, 'onModelChange:', !!onModelChange);
   
   return (
     <div 

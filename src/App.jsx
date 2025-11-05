@@ -12,7 +12,10 @@ function App() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [error, setError] = useState('');
-  const [currentModel, setCurrentModel] = useState('gemini-2.5-pro');
+  const [currentModel, setCurrentModel] = useState(() => {
+    // Initialize from localStorage or default to gemini-2.5-pro
+    return nebulaApi.getCurrentModel();
+  });
   const messagesEndRef = useRef(null);
 
   // Check API key when component mounts
@@ -25,6 +28,15 @@ function App() {
     } else {
       setHasApiKey(false);
       setShowApiKeyModal(true);
+    }
+  }, []);
+
+  // Sync current model with localStorage on mount
+  useEffect(() => {
+    const savedModel = nebulaApi.getCurrentModel();
+    if (savedModel !== currentModel) {
+      setCurrentModel(savedModel);
+      console.log('🔄 Synced model from localStorage:', savedModel);
     }
   }, []);
 
@@ -136,16 +148,32 @@ function App() {
       setMessages(prev => [...prev, userMessage]);
 
       // Prepare conversation history for API
-      const conversationHistory = messages.map(msg => ({
-        role: msg.isUser ? 'user' : 'assistant',
-        content: msg.content
-      }));
+      // Only include text content to avoid token bloat from images
+      // Keep only last 10 messages to avoid token limits
+      const conversationHistory = messages
+        .slice(-10) // Only keep last 10 messages
+        .map(msg => ({
+          role: msg.isUser ? 'user' : 'assistant',
+          content: msg.content
+        }))
+        .filter(msg => msg.content && msg.content.trim()); // Remove empty messages
 
       // Send message to Nebula API with current model
       const response = await nebulaApi.sendChatMessage(text || '', conversationHistory, imageUrls.length > 0 ? imageUrls : null);
       
       // Add AI response
       let responseContent = response.choices?.[0]?.message?.content || 'Sorry, I cannot process your request.';
+      
+      // Check if the response is an error message from the API
+      if (responseContent.includes('Sorry, an error occurred') || responseContent.includes('error occurred')) {
+        console.error('⚠️ API returned error message:', responseContent);
+        
+        // Try to get more info from the response
+        console.log('📥 Full response:', JSON.stringify(response, null, 2));
+        
+        // If this is a real error from the API, throw it to trigger error handling
+        throw new Error('API returned an error. Your chat history might be too long. Please try clearing the chat.');
+      }
       
       // Add note if we had to use fallback for multiple images
       if (images && images.length > 1) {
@@ -164,10 +192,10 @@ function App() {
       console.error('Error sending message:', error);
       setError(error.message || 'An error occurred while sending the message');
       
-      // Add error message
+      // Add error message with helpful information
       const errorMessage = {
         id: Date.now() + 1,
-        content: 'Sorry, an error occurred while processing your message. Please try again.',
+        content: `Sorry, an error occurred while processing your message.\n\nError: ${error.message}\n\nThis might be because:\n- Your chat history is too long (try clearing it)\n- The API request exceeded token limits\n- Network connectivity issues\n\nPlease try clearing the chat and starting a new conversation.`,
         isUser: false,
         timestamp: new Date()
       };
@@ -205,9 +233,10 @@ function App() {
   };
 
   const handleModelChange = (modelId) => {
+    console.log('🎯 Switching to model:', modelId);
     setCurrentModel(modelId);
     nebulaApi.setModel(modelId);
-    console.log('🎯 Switched to model:', modelId);
+    console.log('✅ Model switched successfully to:', modelId);
   };
 
   const handleExportChat = () => {

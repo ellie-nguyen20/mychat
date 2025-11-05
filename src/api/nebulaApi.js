@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configure API base URL and headers for Nebula Block
-const API_BASE_URL = 'https://inference.nebulablock.com/v1';
+const API_BASE_URL = 'https://dev-llm-proxy.meganova.ai/v1';
 
 class NebulaApiService {
   constructor() {
