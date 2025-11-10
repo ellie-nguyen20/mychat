@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configure API base URL and headers for Nebula Block
-const API_BASE_URL = 'https://dev-llm-proxy.meganova.ai/v1';
+const API_BASE_URL = 'https://inference.meganova.ai/v1';
 
 class NebulaApiService {
   constructor() {
@@ -77,13 +77,15 @@ class NebulaApiService {
       const selectedModel = this.getCurrentModel();
       const modelMapping = {
         'deepseek-v3-0324': 'deepseek-ai/DeepSeek-V3-0324',
-        'deepseek-r1-0528': 'deepseek-ai/DeepSeek-R1-0528-Free',
+        'deepseek-r1-0528': 'deepseek-ai/DeepSeek-R1-0528',
+        'deepseek-r1-0528-free': 'deepseek-ai/DeepSeek-R1-0528-Free',
         'gpt-4o-mini': 'openai/gpt-4o-mini',
         'gemini-2.5-pro': 'gemini/gemini-2.5-pro',
         'qwen2.5-vl-7b': 'Qwen/Qwen2.5-VL-7B-Instruct'
       };
       
-      const actualModel = modelMapping[selectedModel] || 'openai/gpt-4o-mini';
+      const actualModel = modelMapping[selectedModel] || selectedModel || 'openai/gpt-4o-mini';
+      const isDeepSeekR1Preferred = actualModel === 'deepseek-ai/DeepSeek-R1-0528';
       console.log('🎯 Using model:', actualModel);
 
       // Check if model supports vision
@@ -166,6 +168,26 @@ class NebulaApiService {
         return response.data;
       } catch (requestError) {
         console.error('🚨 Request failed, trying with single image fallback...');
+        
+        // If the preferred R1 model is unavailable, fallback to Free variant
+        if (
+          requestError.response?.status === 404 &&
+          isDeepSeekR1Preferred
+        ) {
+          console.warn('⚠️ DeepSeek R1-0528 not available, falling back to Free variant');
+          const fallbackRequestData = {
+            ...requestData,
+            model: 'deepseek-ai/DeepSeek-R1-0528-Free'
+          };
+          try {
+            const fallbackResponse = await this.api.post('/chat/completions', fallbackRequestData);
+            console.log('📥 Fallback response received (Free variant):', fallbackResponse.data);
+            return fallbackResponse.data;
+          } catch (fallbackError) {
+            console.error('❌ Fallback to Free variant failed:', fallbackError.response?.data || fallbackError.message);
+            throw fallbackError;
+          }
+        }
         
         // If request fails and we have multiple images, try with just the first one
         if (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 1) {

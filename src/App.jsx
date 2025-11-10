@@ -45,7 +45,10 @@ function App() {
     const savedMessages = localStorage.getItem('chat_history');
     if (savedMessages) {
       try {
-        const parsedMessages = JSON.parse(savedMessages);
+        const parsedMessages = JSON.parse(savedMessages).map((msg) => ({
+          ...msg,
+          images: Array.isArray(msg.images) ? msg.images : []
+        }));
         setMessages(parsedMessages);
         console.log('📚 Loaded chat history:', parsedMessages.length, 'messages');
       } catch (error) {
@@ -57,8 +60,27 @@ function App() {
   // Save chat history to localStorage whenever messages change
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem('chat_history', JSON.stringify(messages));
-      console.log('💾 Saved chat history:', messages.length, 'messages');
+      const MAX_STORED_MESSAGES = 50;
+      const sanitizedMessages = messages
+        .slice(-MAX_STORED_MESSAGES)
+        .map(({ images, ...rest }) => ({
+          ...rest,
+          images: []
+        }));
+
+      try {
+        localStorage.setItem('chat_history', JSON.stringify(sanitizedMessages));
+        console.log('💾 Saved chat history (sanitized):', sanitizedMessages.length, 'messages');
+      } catch (storageError) {
+        if (storageError?.name === 'QuotaExceededError') {
+          console.warn('⚠️ Chat history too large, clearing stored history to avoid quota issues');
+          localStorage.removeItem('chat_history');
+        } else {
+          console.error('❌ Error saving chat history:', storageError);
+        }
+      }
+    } else {
+      localStorage.removeItem('chat_history');
     }
   }, [messages]);
 
@@ -89,8 +111,8 @@ function App() {
       {
         id: 'deepseek-r1-0528',
         name: 'DeepSeek R1-0528',
-        fullName: 'deepseek-ai/DeepSeek-R1-0528-Free',
-        description: 'Latest model - excels in reasoning, math & coding (Free version)',
+        fullName: 'deepseek-ai/DeepSeek-R1-0528',
+        description: 'Latest model - excels in reasoning, math & coding',
         price: 'Free',
         features: ['Latest model', 'Free version', 'Advanced reasoning']
       },
@@ -146,6 +168,20 @@ function App() {
       };
 
       setMessages(prev => [...prev, userMessage]);
+
+      // If images are attached, ensure the selected model supports vision
+      const visionCapableModels = ['qwen2.5-vl-7b', 'gpt-4o-mini', 'gemini-2.5-pro'];
+      if (imageUrls.length > 0 && !visionCapableModels.includes(currentModel)) {
+        const warningMessage = {
+          id: Date.now() + 1,
+          content: `Rất tiếc, model hiện tại (${currentModel}) không hỗ trợ phân tích hình ảnh.\n\nVui lòng chọn một trong các model có hỗ trợ vision (Qwen2.5-VL-7B, GPT-4o-mini, Gemini 2.5 Pro) rồi gửi lại.`,
+          isUser: false,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, warningMessage]);
+        setError('Model hiện tại không hỗ trợ hình ảnh. Hãy chọn model vision và thử lại.');
+        return;
+      }
 
       // Prepare conversation history for API
       // Only include text content to avoid token bloat from images

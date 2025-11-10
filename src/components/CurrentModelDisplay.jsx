@@ -62,10 +62,10 @@ const CurrentModelDisplay = ({ currentModel, modelInfo, onModelChange }) => {
     {
       id: 'deepseek-r1-0528',
       name: 'DeepSeek R1-0528',
-      fullName: 'deepseek-ai/DeepSeek-R1-0528-Free',
-      description: 'Latest model - excels in reasoning, math & coding (Free version)',
+      fullName: 'deepseek-ai/DeepSeek-R1-0528',
+      description: 'Latest model - excels in reasoning, math & coding',
       price: 'Free',
-      features: ['Latest model', 'Free version', 'Advanced reasoning']
+      features: ['Latest model', 'Advanced reasoning', 'Long context']
     },
     {
       id: 'gpt-4o-mini',
